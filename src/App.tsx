@@ -70,6 +70,37 @@ const GET_RENTALS = gql`
   }
 `
 
+const GET_RENTAL_BY_SLUG = gql`
+  query GetRentalBySlug($slug: String!) {
+    rentals(where: { name: $slug, status: PUBLISH }, first: 1) {
+      nodes {
+        id
+        title
+        slug
+        uri
+        content
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        rentalDetails {
+          monthlyRent
+          bedrooms
+          bathrooms
+          squareFeet
+          availableDate
+          isAvailable
+          city
+          state
+          locationLabel
+        }
+      }
+    }
+  }
+`
+
 type ImageNode = {
   sourceUrl: string
   altText?: string | null
@@ -125,6 +156,7 @@ type RentalNode = {
   slug: string
   uri: string
   excerpt?: string | null
+  content?: string | null
   featuredImage?: {
     node?: ImageNode | null
   } | null
@@ -135,6 +167,16 @@ type GetRentalsData = {
   rentals: {
     nodes: RentalNode[]
   }
+}
+
+type GetRentalBySlugData = {
+  rentals: {
+    nodes: RentalNode[]
+  }
+}
+
+type GetRentalBySlugVars = {
+  slug: string
 }
 
 function formatCurrency(value?: number | null) {
@@ -150,7 +192,11 @@ function formatAvailableDate(value?: string | null) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
 }
 
 function DebugPageList() {
@@ -170,17 +216,13 @@ function DebugPageList() {
 
       {error && (
         <div>
-          <p>
-            <strong>GraphQL error:</strong> {error.message}
-          </p>
+          <p><strong>GraphQL error:</strong> {error.message}</p>
         </div>
       )}
 
       {data && (
         <>
-          <p>
-            <strong>Connected ✅</strong>
-          </p>
+          <p><strong>Connected ✅</strong></p>
           <h2>Pages from WordPress</h2>
           <ul>
             {data.pages.nodes.map((page) => {
@@ -232,9 +274,7 @@ function WpPageView({ uri }: { uri: string }) {
 
       {error && (
         <div>
-          <p>
-            <strong>GraphQL error:</strong> {error.message}
-          </p>
+          <p><strong>GraphQL error:</strong> {error.message}</p>
         </div>
       )}
 
@@ -281,12 +321,7 @@ function RentalsPage() {
 
       {error && (
         <div>
-          <p>
-            <strong>GraphQL error:</strong> {error.message}
-          </p>
-          <p style={{ marginTop: '0.5rem' }}>
-            If this mentions <code>rentalDetails</code> or a field name, your ACF GraphQL field names may differ slightly.
-          </p>
+          <p><strong>GraphQL error:</strong> {error.message}</p>
         </div>
       )}
 
@@ -326,7 +361,11 @@ function RentalsPage() {
               )}
 
               <div>
-                <h2 style={{ margin: 0 }}>{rental.title}</h2>
+                <h2 style={{ margin: 0 }}>
+                  <Link to={`/rentals/${rental.slug}`} viewTransition>
+                    {rental.title}
+                  </Link>
+                </h2>
                 <p style={{ margin: '0.25rem 0 0' }}>
                   {details?.locationLabel || 'Rental property'}
                   {(details?.city || details?.state) &&
@@ -340,18 +379,92 @@ function RentalsPage() {
                 <span><strong>Baths:</strong> {details?.bathrooms ?? '—'}</span>
                 <span><strong>Sq Ft:</strong> {details?.squareFeet ?? '—'}</span>
                 <span><strong>Available:</strong> {formatAvailableDate(details?.availableDate)}</span>
-                <span>
-                  <strong>Status:</strong> {isAvailable ? 'Available' : 'Not currently available'}
-                </span>
+                <span><strong>Status:</strong> {isAvailable ? 'Available' : 'Not currently available'}</span>
               </div>
 
               {rental.excerpt && (
                 <div dangerouslySetInnerHTML={{ __html: rental.excerpt }} />
               )}
+
+              <div>
+                <Link to={`/rentals/${rental.slug}`} viewTransition>
+                  View details →
+                </Link>
+              </div>
             </article>
           )
         })}
       </div>
+    </div>
+  )
+}
+
+function RentalDetailPage() {
+  const { slug } = useParams()
+  const { loading, error, data } = useQuery<GetRentalBySlugData, GetRentalBySlugVars>(GET_RENTAL_BY_SLUG, {
+    variables: { slug: slug ?? '' },
+    skip: !slug,
+  })
+
+  const rental = data?.rentals?.nodes?.[0]
+  const details = rental?.rentalDetails
+  const image = rental?.featuredImage?.node
+  const isAvailable = details?.isAvailable ?? false
+
+  return (
+    <div style={{ padding: '1.5rem', textAlign: 'left' }}>
+      <nav style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+        <Link to="/" viewTransition>Home</Link>
+        <Link to="/rentals" viewTransition>Rentals</Link>
+      </nav>
+
+      {loading && <p>Loading rental details...</p>}
+
+      {error && (
+        <div>
+          <p><strong>GraphQL error:</strong> {error.message}</p>
+        </div>
+      )}
+
+      {!loading && !error && !rental && <p>Rental not found.</p>}
+
+      {rental && (
+        <article style={{ display: 'grid', gap: '1rem' }}>
+          {image?.sourceUrl && (
+            <img
+              src={image.sourceUrl}
+              alt={image.altText || rental.title}
+              style={{
+                width: '100%',
+                maxWidth: '900px',
+                height: 'auto',
+                display: 'block',
+                borderRadius: '10px',
+              }}
+            />
+          )}
+
+          <header>
+            <h1 style={{ marginBottom: '0.25rem' }}>{rental.title}</h1>
+            <p style={{ margin: 0 }}>
+              {details?.locationLabel || 'Rental property'}
+              {(details?.city || details?.state) &&
+                ` — ${[details?.city, details?.state].filter(Boolean).join(', ')}`}
+            </p>
+          </header>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1rem' }}>
+            <span><strong>Rent:</strong> {formatCurrency(details?.monthlyRent)}</span>
+            <span><strong>Beds:</strong> {details?.bedrooms ?? '—'}</span>
+            <span><strong>Baths:</strong> {details?.bathrooms ?? '—'}</span>
+            <span><strong>Sq Ft:</strong> {details?.squareFeet ?? '—'}</span>
+            <span><strong>Available:</strong> {formatAvailableDate(details?.availableDate)}</span>
+            <span><strong>Status:</strong> {isAvailable ? 'Available' : 'Not currently available'}</span>
+          </div>
+
+          {rental.content && <div dangerouslySetInnerHTML={{ __html: rental.content }} />}
+        </article>
+      )}
     </div>
   )
 }
@@ -386,8 +499,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomeWpRoute />} />
 
-      {/* Dedicated frontend route for CPT listings */}
+      {/* Rentals routes (must come before generic page slug route) */}
       <Route path="/rentals" element={<RentalsPage />} />
+      <Route path="/rentals/:slug" element={<RentalDetailPage />} />
 
       {/* WP Pages by slug */}
       <Route path="/:slug" element={<SlugWpRoute />} />
