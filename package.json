@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "build:bluehost": "npm run build && cp .bluehost/.htaccess dist/.htaccess",
+    "zip:bluehost": "cd dist && zip -r ../treecityrentals-deploy.zip .",
+    "deploy:bluehost": "npm run build:bluehost && npm run zip:bluehost"
   },
   "dependencies": {
     "@apollo/client": "^4.1.6",

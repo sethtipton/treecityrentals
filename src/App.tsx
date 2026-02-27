@@ -10,6 +10,14 @@ const GET_PAGES = gql`
         id
         title
         slug
+        uri
+        excerpt
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
       }
     }
   }
@@ -22,6 +30,12 @@ const GET_PAGE_BY_URI = gql`
       title
       uri
       content
+      featuredImage {
+        node {
+          sourceUrl
+          altText
+        }
+      }
     }
   }
 `
@@ -30,6 +44,14 @@ type PageNode = {
   id: string
   title: string
   slug: string
+  uri: string
+  excerpt?: string | null
+  featuredImage?: {
+    node?: {
+      sourceUrl: string
+      altText?: string | null
+    } | null
+  } | null
 }
 
 type GetPagesData = {
@@ -44,6 +66,12 @@ type GetPageByUriData = {
     title: string
     uri: string
     content?: string | null
+    featuredImage?: {
+      node?: {
+        sourceUrl: string
+        altText?: string | null
+      } | null
+    } | null
   } | null
 }
 
@@ -51,7 +79,7 @@ type GetPageByUriVars = {
   uri: string
 }
 
-function HomePage() {
+function DebugPageList() {
   const { loading, error, data } = useQuery<GetPagesData>(GET_PAGES)
 
   return (
@@ -76,24 +104,31 @@ function HomePage() {
           </p>
           <h2>Pages from WordPress</h2>
           <ul>
-            {data.pages.nodes.map((page: PageNode) => {
-              const frontendPath = page.slug === 'home' ? '/' : `/${page.slug}`
+            {data.pages.nodes.map((page) => {
+              const frontendPath = page.slug === 'home' ? '/' : page.uri
 
               return (
-                <li key={page.id}>
-                  <Link to={frontendPath} viewTransition>
-                    {page.title || '(no title)'}
-                  </Link>{' '}
-                  — <code>{frontendPath}</code>
+                <li key={page.id} style={{ marginBottom: '1rem' }}>
+                  <div>
+                    <Link to={frontendPath} viewTransition>
+                      {page.title || '(no title)'}
+                    </Link>{' '}
+                    — <code>{frontendPath}</code>
+                  </div>
+
+                  {page.featuredImage?.node?.sourceUrl && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <img
+                        src={page.featuredImage.node.sourceUrl}
+                        alt={page.featuredImage.node.altText || ''}
+                        style={{ maxWidth: '220px', height: 'auto', display: 'block' }}
+                      />
+                    </div>
+                  )}
                 </li>
               )
             })}
           </ul>
-
-          <p style={{ marginTop: '1rem' }}>
-            Try clicking between pages — on supported browsers, the route change uses the View Transitions API
-            via React Router’s <code>viewTransition</code> prop.
-          </p>
         </>
       )}
     </div>
@@ -105,19 +140,15 @@ function WpPageView({ uri }: { uri: string }) {
     variables: { uri },
   })
 
+  const featuredImage = data?.page?.featuredImage?.node
+
   return (
     <div style={{ padding: '1.5rem', textAlign: 'left' }}>
       <nav style={{ marginBottom: '1rem' }}>
         <Link to="/" viewTransition>
-          ← Back to Home
+          ← Home
         </Link>
       </nav>
-
-      <p>
-        <small>
-          Querying WordPress URI: <code>{uri}</code>
-        </small>
-      </p>
 
       {loading && <p>Loading page content...</p>}
 
@@ -133,6 +164,21 @@ function WpPageView({ uri }: { uri: string }) {
 
       {data?.page && (
         <article>
+          {featuredImage?.sourceUrl && (
+            <img
+              src={featuredImage.sourceUrl}
+              alt={featuredImage.altText || ''}
+              style={{
+                width: '100%',
+                maxWidth: '800px',
+                height: 'auto',
+                display: 'block',
+                marginBottom: '1rem',
+                borderRadius: '8px',
+              }}
+            />
+          )}
+
           <h1>{data.page.title}</h1>
           <div dangerouslySetInnerHTML={{ __html: data.page.content ?? '' }} />
         </article>
@@ -142,26 +188,39 @@ function WpPageView({ uri }: { uri: string }) {
 }
 
 function HomeWpRoute() {
-  // Map frontend root "/" to your WordPress page with slug "home"
-  return <WpPageView uri="/home" />
+  return <WpPageView uri="/home/" />
 }
 
 function SlugWpRoute() {
   const { slug } = useParams()
-  return <WpPageView uri={`/${slug ?? ''}`} />
+  return <WpPageView uri={`/${slug ?? ''}/`} />
+}
+
+function NotFoundPage() {
+  return (
+    <div style={{ padding: '1.5rem', textAlign: 'left' }}>
+      <h1>Page not found</h1>
+      <p>This route doesn’t exist in the frontend app.</p>
+      <p>
+        <Link to="/" viewTransition>
+          Go back home
+        </Link>
+      </p>
+    </div>
+  )
 }
 
 export default function App() {
+  const isDev = import.meta.env.DEV
+
   return (
     <Routes>
-      {/* frontend root -> WP "Home" page */}
       <Route path="/" element={<HomeWpRoute />} />
-
-      {/* helper route to see page list + test links */}
-      <Route path="/_debug" element={<HomePage />} />
-
-      {/* dynamic WP pages by slug, e.g. /tenant-resources */}
       <Route path="/:slug" element={<SlugWpRoute />} />
+
+      {isDev && <Route path="/_debug" element={<DebugPageList />} />}
+
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
