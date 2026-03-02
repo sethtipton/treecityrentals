@@ -11,10 +11,10 @@ type StateMessageProps = {
   }: StateMessageProps) {
     return (
       <div className="card ui-state" aria-live="polite" aria-busy="true">
-        <div className="ui-state__spinner" aria-hidden="true" />
-        <div className="ui-state__content">
-          <h2 className="ui-state__title">{title}</h2>
-          <p className="ui-state__message">{message}</p>
+        <div className="ui-state-spinner" aria-hidden="true" />
+        <div className="ui-state-content">
+          <h2 className="ui-state-title">{title}</h2>
+          <p className="ui-state-message">{message}</p>
           {children}
         </div>
       </div>
@@ -27,10 +27,10 @@ type StateMessageProps = {
     children,
   }: StateMessageProps) {
     return (
-      <div className="card ui-state ui-state--error" role="alert">
-        <div className="ui-state__content">
-          <h2 className="ui-state__title">{title}</h2>
-          <p className="ui-state__message">{message}</p>
+      <div className="card ui-state ui-state-error" role="alert">
+        <div className="ui-state-content">
+          <h2 className="ui-state-title">{title}</h2>
+          <p className="ui-state-message">{message}</p>
           {children}
         </div>
       </div>
@@ -44,9 +44,9 @@ type StateMessageProps = {
   }: StateMessageProps) {
     return (
       <div className="card ui-state">
-        <div className="ui-state__content">
-          <h2 className="ui-state__title">{title}</h2>
-          <p className="ui-state__message">{message}</p>
+        <div className="ui-state-content">
+          <h2 className="ui-state-title">{title}</h2>
+          <p className="ui-state-message">{message}</p>
           {children}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { SubmitEventHandler } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import SiteLayout from './SiteLayout'
@@ -52,6 +52,9 @@ export default function ContactPage() {
   const [form, setForm] = useState<InquiryForm>(() => prefilledInitialForm)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitted, setSubmitted] = useState(false)
+  const nameErrorId = useId()
+  const emailErrorId = useId()
+  const messageErrorId = useId()
 
   const canShowSummary = useMemo(() => submitted, [submitted])
 
@@ -110,23 +113,28 @@ export default function ContactPage() {
   return (
     <SiteLayout>
       <h1 className="page-title">Contact / Rental Inquiry</h1>
-      <p className="page-subtle" style={{ marginTop: 0 }}>
+      <p className="page-subtle contact-intro">
         This is a frontend route. We’ll connect it to a real submission endpoint later.
       </p>
 
       {prefillProperty && (
-        <p className="page-subtle" style={{ marginTop: '0.25rem' }}>
+        <p className="page-subtle contact-prefill">
           Prefilled from rental: <strong>{prefillProperty}</strong>
         </p>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="card"
-        style={{ display: 'grid', gap: '0.9rem', maxWidth: '760px' }}
+        className="card contact-form"
         noValidate
       >
-        <div style={{ display: 'grid', gap: '0.25rem' }}>
+        {Object.keys(errors).length > 0 && (
+          <p className="form-error" role="alert">
+            Please correct the highlighted fields and try again.
+          </p>
+        )}
+
+        <div className="form-field">
           <label htmlFor="name">Name *</label>
           <input
             id="name"
@@ -134,11 +142,17 @@ export default function ContactPage() {
             value={form.name}
             onChange={(e) => updateField('name', e.target.value)}
             autoComplete="name"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? nameErrorId : undefined}
           />
-          {errors.name && <small style={{ color: '#b91c1c' }}>{errors.name}</small>}
+          {errors.name && (
+            <small id={nameErrorId} className="form-error" role="alert">
+              {errors.name}
+            </small>
+          )}
         </div>
 
-        <div style={{ display: 'grid', gap: '0.25rem' }}>
+        <div className="form-field">
           <label htmlFor="email">Email *</label>
           <input
             id="email"
@@ -146,11 +160,17 @@ export default function ContactPage() {
             value={form.email}
             onChange={(e) => updateField('email', e.target.value)}
             autoComplete="email"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? emailErrorId : undefined}
           />
-          {errors.email && <small style={{ color: '#b91c1c' }}>{errors.email}</small>}
+          {errors.email && (
+            <small id={emailErrorId} className="form-error" role="alert">
+              {errors.email}
+            </small>
+          )}
         </div>
 
-        <div style={{ display: 'grid', gap: '0.25rem' }}>
+        <div className="form-field">
           <label htmlFor="phone">Phone (optional)</label>
           <input
             id="phone"
@@ -161,8 +181,8 @@ export default function ContactPage() {
           />
         </div>
 
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
-          <div style={{ display: 'grid', gap: '0.25rem' }}>
+        
+          <div className="form-field">
             <label htmlFor="interestedProperty">Interested Property (optional)</label>
             <input
               id="interestedProperty"
@@ -173,7 +193,7 @@ export default function ContactPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gap: '0.25rem' }}>
+          <div className="form-field">
             <label htmlFor="moveInDate">Desired Move-In Date (optional)</label>
             <input
               id="moveInDate"
@@ -182,9 +202,9 @@ export default function ContactPage() {
               onChange={(e) => updateField('moveInDate', e.target.value)}
             />
           </div>
-        </div>
+       
 
-        <div style={{ display: 'grid', gap: '0.25rem' }}>
+        <div className="form-field">
           <label htmlFor="message">Message *</label>
           <textarea
             id="message"
@@ -192,11 +212,17 @@ export default function ContactPage() {
             onChange={(e) => updateField('message', e.target.value)}
             rows={6}
             placeholder="Tell us what you're looking for, preferred move-in timing, pets, etc."
+            aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? messageErrorId : undefined}
           />
-          {errors.message && <small style={{ color: '#b91c1c' }}>{errors.message}</small>}
+          {errors.message && (
+            <small id={messageErrorId} className="form-error" role="alert">
+              {errors.message}
+            </small>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="contact-form-actions">
           <button type="submit">Send Inquiry</button>
           <button type="button" onClick={handleReset}>
             Reset
@@ -205,9 +231,9 @@ export default function ContactPage() {
       </form>
 
       {canShowSummary && (
-        <div className="card" style={{ marginTop: '1rem', maxWidth: '760px' }}>
-          <h2 style={{ margin: 0 }}>Inquiry saved (frontend placeholder) ✅</h2>
-          <p className="page-subtle" style={{ marginTop: '0.25rem' }}>
+        <div className="card contact-summary" role="status" aria-live="polite">
+          <h2 className="contact-summary-title">Inquiry saved (frontend placeholder) ✅</h2>
+          <p className="page-subtle contact-summary-subtle">
             Next step we can connect this to Formspree or a serverless endpoint.
           </p>
 
@@ -228,7 +254,7 @@ export default function ContactPage() {
 
           <div>
             <strong>Message:</strong>
-            <p style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>{form.message}</p>
+            <p className="contact-summary-message">{form.message}</p>
           </div>
         </div>
       )}
